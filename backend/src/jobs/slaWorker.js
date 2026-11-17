@@ -73,7 +73,7 @@ async function processApplications(applications, now, persist) {
 }
 
 export function startSlaWorker() {
-  cron.schedule('0 * * * *', async () => {
+  cron.schedule('* * * * *', async () => {
     const now = new Date();
     try {
       if (globalThis.mongoReady) {
@@ -90,5 +90,5 @@ export function startSlaWorker() {
       console.error('[sla] Worker error:', error.message);
     }
   });
-  console.log('SLA worker scheduled: hourly reminders and overdue escalation');
+  console.log('SLA worker scheduled: checks reminders and overdue applications every minute');
 }
