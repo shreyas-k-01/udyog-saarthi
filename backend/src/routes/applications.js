@@ -35,15 +35,18 @@ router.post('/', protect, allow('candidate'), async (req, res) => {
       html: emailHtml('Your application has been received', `Hello ${req.user.name}, your application for ${job.title} has been received.`, `Expected employer review deadline: ${dateLabel(reviewDueAt)}`)
     });
 
+    let employerEmail;
     if (employerId && globalThis.mongoReady) {
       const employer = await User.findById(employerId).select('name email');
-      if (employer?.email) await sendEmail({
-        to: employer.email,
-        subject: `New candidate application: ${job.title}`,
-        text: `${req.user.name} has applied for ${job.title}. Please review this application by ${dateLabel(reviewDueAt)}.`,
-        html: emailHtml('You have a new application', `${req.user.name} has applied for ${job.title}.`, `Please review by: ${dateLabel(reviewDueAt)}`)
-      });
+      employerEmail = employer?.email;
     }
+    employerEmail = employerEmail || process.env.EMPLOYER_NOTIFICATION_EMAIL;
+    if (employerEmail) await sendEmail({
+      to: employerEmail,
+      subject: `New candidate application: ${job.title}`,
+      text: `${req.user.name} has applied for ${job.title}. Please review this application by ${dateLabel(reviewDueAt)}.`,
+      html: emailHtml('You have a new application', `${req.user.name} has applied for ${job.title}.`, `Please review by: ${dateLabel(reviewDueAt)}`)
+    });
 
     res.status(201).json({ application: app });
   } catch (error) {
