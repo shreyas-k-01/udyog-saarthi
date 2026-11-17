@@ -1,33 +1,718 @@
-import React,{useEffect,useMemo,useState} from 'react';import{createRoot}from'react-dom/client';import{Activity,ArrowDownRight,ArrowUpRight,BriefcaseBusiness,Building2,CalendarClock,Check,ChevronDown,ChevronRight,CircleHelp,Clock3,FileText,Filter,GraduationCap,LayoutDashboard,LogOut,MapPin,Menu,MessageSquareText,Plus,Search,Settings,ShieldCheck,Sparkles,Target,Users,WalletCards,X,Upload,Bookmark,ExternalLink,CheckCircle2,AlertTriangle,BrainCircuit,ChartNoAxesCombined}from'lucide-react';import{api}from'./lib/api';import'./styles.css';
-const initials=n=>(n||'U').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
-function App(){const[user,setUser]=useState(()=>JSON.parse(localStorage.getItem('us_user')||'null'));const[page,setPage]=useState('Overview');const[menu,setMenu]=useState(false);const[toast,setToast]=useState('');const[search,setSearch]=useState('');const[jobs,setJobs]=useState([]);const[apps,setApps]=useState([]);const[analytics,setAnalytics]=useState({});const[loading,setLoading]=useState(false);const[modal,setModal]=useState('');const[form,setForm]=useState({name:'',email:'',password:'',role:'candidate',skills:'Excel, Communication',location:'Bengaluru',education:'Graduate'});const[profile,setProfile]=useState({skills:'',interests:'',location:'',education:''});const[guidance,setGuidance]=useState('');const[aiBusy,setAiBusy]=useState(false);
-const notify=m=>{setToast(m);setTimeout(()=>setToast(''),3200)};
-async function load(){if(!user)return;setLoading(true);try{const [j,a]=await Promise.all([api(user.role==='candidate'?'/jobs/recommended':'/jobs'),api(user.role==='candidate'?'/applications/mine':'/applications/analytics')]);setJobs(j.jobs||[]);if(user.role==='candidate')setApps(a.applications||[]);else setAnalytics(a);}catch(e){notify(e.message);}finally{setLoading(false);}}
-useEffect(()=>{load();},[user]);
-async function auth(mode){try{const d=await api(`/auth/${mode}`,{method:'POST',body:JSON.stringify({...form,skills:form.skills.split(',').map(x=>x.trim()).filter(Boolean)})});localStorage.setItem('us_token',d.token);localStorage.setItem('us_user',JSON.stringify(d.user));setUser(d.user);setModal('');notify('Welcome to Udyog Saarthi');}catch(e){notify(e.message);}}
-function logout(){localStorage.removeItem('us_token');localStorage.removeItem('us_user');setUser(null);setPage('Overview');}
-async function apply(job){try{await api('/applications',{method:'POST',body:JSON.stringify({job})});notify('Application submitted. Your review deadline is now active.');load();}catch(e){notify(e.message);}}
-async function updateProfile(){try{const d=await api('/auth/me',{method:'PUT',body:JSON.stringify({...profile,skills:profile.skills.split(',').map(x=>x.trim()).filter(Boolean),interests:profile.interests.split(',').map(x=>x.trim()).filter(Boolean)})});setUser(d.user);localStorage.setItem('us_user',JSON.stringify(d.user));notify('Profile updated');setPage('Overview');}catch(e){notify(e.message);}}
-async function updateStatus(id,status){try{await api(`/applications/${id}/status`,{method:'PATCH',body:JSON.stringify({status})});notify(`Application moved to ${status}`);load();}catch(e){notify(e.message);}}
-async function careerHelp(job){setAiBusy(true);setGuidance('');try{const d=await api('/ai/career-guidance',{method:'POST',body:JSON.stringify({jobTitle:job.title,description:job.description})});setGuidance(d.guidance+`\n\nPowered by: ${d.poweredBy}`);}catch(e){notify(e.message);}finally{setAiBusy(false);}}
-const nav=user?.role==='candidate'?[['Workspace',[['Overview',LayoutDashboard],['Find opportunities',BriefcaseBusiness],['My applications',FileText],['Career intelligence',BrainCircuit]]],['Account',[['My profile',Users]]]]:[['Workspace',[['Overview',LayoutDashboard],['Applications',FileText],['Job listings',BriefcaseBusiness]]]];
-if(!user)return <AuthScreen form={form} setForm={setForm} auth={auth} modal={modal} setModal={setModal}/>;
-return <div className="app-shell"><aside className={`sidebar ${menu?'open':''}`}><div className="brand"><div className="brand-mark"><Sparkles size={19}/></div><div><b>udyog<span>.</span></b><small>SAARTHI PLATFORM</small></div><button className="mobile-close" onClick={()=>setMenu(false)}><X/></button></div><div className="workspace-label">WORKSPACE</div>{nav.map(group=><div className="nav-group" key={group[0]}><div className="nav-heading">{group[0]}</div>{group[1].map(([label,Icon])=><button key={label} className={`nav-link ${page===label?'active':''}`} onClick={()=>{setPage(label);setMenu(false);}}><Icon size={17}/><span>{label}</span>{label==='My applications'&&apps.length>0&&<em>{apps.length}</em>}</button>)}</div>)}<div className="sidebar-bottom"><div className="help-card"><div className="help-icon"><CircleHelp size={17}/></div><b>Need a hand?</b><p>Explore your career journey with confidence.</p><button onClick={()=>setPage('Career intelligence')}>Explore guidance <ChevronRight size={14}/></button></div><button className="nav-link" onClick={()=>setPage('My profile')}><Settings size={17}/> Settings</button><div className="user-mini"><div className="avatar">{initials(user.name)}</div><div className="user-mini-text"><b>{user.name}</b><small>{user.role==='candidate'?'Candidate account':user.role}</small></div><button onClick={logout} title="Sign out"><LogOut size={16}/></button></div></div></aside><main className="main"><header className="topbar"><button className="hamburger" onClick={()=>setMenu(true)}><Menu/></button><div className="crumb">Platform <ChevronRight size={13}/> <b>{page}</b></div><div className="top-actions"><span className="status-dot"></span><span className="live-label">Workspace active</span><button className="icon-btn" onClick={()=>notify('You are all caught up')}><Activity size={18}/></button><div className="avatar small">{initials(user.name)}</div></div></header><div className="content"><div className="page-heading"><div><div className="eyebrow">{new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div><h1>{page==='Overview'?`Good ${new Date().getHours()<12?'morning':new Date().getHours()<17?'afternoon':'evening'}, ${user.name.split(' ')[0]}`:page}</h1><p>{page==='Overview'?'Here is what is happening across your employment journey.':page==='Find opportunities'?'Discover opportunities aligned with your skills and goals.':page==='Applications'?'Keep track of every candidate application and review deadline.':page==='My applications'?'Track progress, review dates and next steps.':page==='Career intelligence'?'Turn your experience into a practical next-step career plan.':'Keep your professional information up to date.'}</p></div>{user.role==='employer'&&<button className="primary-btn" onClick={()=>notify('Job posting form is planned for the next iteration.')}><Plus size={16}/> Post a role</button>}</div>
-{page==='Overview'&&<>{user.role==='candidate'?<CandidateOverview user={user} jobs={jobs} apps={apps} loading={loading} setPage={setPage} apply={apply}/>:<EmployerOverview analytics={analytics} apps={apps} setPage={setPage} load={load}/>}</>}
-{(page==='Find opportunities'||page==='Job listings')&&<><div className="toolbar"><div className="searchbox"><Search size={17}/><input placeholder="Search job title, skill or company" value={search} onChange={e=>setSearch(e.target.value)}/></div><button className="secondary-btn" onClick={load}><Filter size={16}/> Refresh listings</button></div><div className="source-line"><span className="live-pulse"></span> Listings include live external feeds when available <span className="dot-sep">·</span> Demo listings are clearly labelled</div><div className="jobs-grid">{jobs.filter(j=>`${j.title} ${j.company} ${j.description}`.toLowerCase().includes(search.toLowerCase())).map(job=><JobCard key={job.id} job={job} apply={apply} candidate={user.role==='candidate'} onGuide={careerHelp}/>)}</div>{!jobs.length&&<Empty title="No listings loaded yet" text="Refresh the listings or check the backend connection."/>}</>}
-{page==='My applications'&&<ApplicationList apps={apps} />}
-{page==='Applications'&&<EmployerApplications load={load} updateStatus={updateStatus}/>}
-{page==='Career intelligence'&&<div className="two-col"><section className="panel"><div className="panel-title"><div><span className="eyebrow">AI CAREER COACH</span><h2>Build your next move</h2></div><div className="round-icon violet"><BrainCircuit/></div></div><p className="muted">Choose a role from your opportunities to get a skill-gap summary and a practical learning plan. Add skills to your profile for more relevant guidance.</p><div className="guidance-result">{guidance||'Your personalized career guidance will appear here.'}</div><button className="primary-btn" disabled={aiBusy||!jobs.length} onClick={()=>careerHelp(jobs[0])}>{aiBusy?'Generating…':<><Sparkles size={16}/> Generate guidance for {jobs[0]?.title||'a role'}</>}</button></section><section className="panel"><div className="panel-title"><div><span className="eyebrow">PROFILE SIGNALS</span><h2>Your skills</h2></div><Target className="muted-icon"/></div><div className="skill-cloud">{(user.skills||[]).map(s=><span className="skill-chip" key={s}>{s}</span>)}</div><p className="muted small-copy">Your skills are used to explain job matches. They are not used to make automated hiring decisions.</p><button className="secondary-btn" onClick={()=>setPage('My profile')}>Update profile <ChevronRight size={15}/></button></section></div>}
-{page==='My profile'&&<section className="panel profile-panel"><div className="panel-title"><div><span className="eyebrow">CANDIDATE PROFILE</span><h2>Professional snapshot</h2></div><div className="round-icon blue"><Users/></div></div><div className="profile-fields"><label>Full name<input value={profile.name??user.name} onChange={e=>setProfile({...profile,name:e.target.value})}/></label><label>Education<input value={profile.education??user.education} onChange={e=>setProfile({...profile,education:e.target.value})} placeholder="e.g. BBA, B.Tech"/></label><label>Preferred location<input value={profile.location??user.location} onChange={e=>setProfile({...profile,location:e.target.value})} placeholder="e.g. Bengaluru"/></label><label>Skills <small>Comma separated</small><textarea value={profile.skills??(user.skills||[]).join(', ')} onChange={e=>setProfile({...profile,skills:e.target.value})} placeholder="Excel, communication, JavaScript"/></label><label>Career interests <small>Comma separated</small><textarea value={profile.interests??(user.interests||[]).join(', ')} onChange={e=>setProfile({...profile,interests:e.target.value})} placeholder="Customer support, administration, technology"/></label></div><button className="primary-btn" onClick={updateProfile}>Save profile <Check size={16}/></button></section>}
-</div></main>{toast&&<div className="toast"><CheckCircle2 size={17}/>{toast}</div>}</div>}
-function AuthScreen({form,setForm,auth}){const[mode,setMode]=useState('login');return <div className="auth-page"><div className="auth-left"><div className="brand light"><div className="brand-mark"><Sparkles size={19}/></div><div><b>udyog<span>.</span></b><small>SAARTHI PLATFORM</small></div></div><div className="auth-pitch"><div className="eyebrow light-eyebrow">CAREER INTELLIGENCE, WITH PURPOSE</div><h1>Make your next<br/><i>move meaningful.</i></h1><p>A more thoughtful way to discover opportunities, understand your strengths and move forward with confidence.</p><div className="auth-stats"><div><b>01</b><span>Discover opportunities</span></div><div><b>02</b><span>Understand your fit</span></div><div><b>03</b><span>Track your progress</span></div></div></div><div className="auth-footer">An inclusive employment intelligence platform.</div></div><div className="auth-right"><div className="auth-form-wrap"><div className="eyebrow">YOUR CAREER WORKSPACE</div><h2>{mode==='login'?'Welcome back':'Create your account'}</h2><p className="muted">{mode==='login'?'Sign in to continue your journey.':'Start building your next opportunity.'}</p>{mode==='register'&&<label>Full name<input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Your name"/></label>}<label>Email address<input type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} placeholder="you@example.com"/></label><label>Password<input type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} placeholder="At least 8 characters"/></label>{mode==='register'&&<><label>Account type<select value={form.role} onChange={e=>setForm({...form,role:e.target.value})}><option value="candidate">Candidate</option><option value="employer">Employer</option></select></label><label>Skills <small>Comma separated</small><input value={form.skills} onChange={e=>setForm({...form,skills:e.target.value})}/></label><label>Preferred location<input value={form.location} onChange={e=>setForm({...form,location:e.target.value})}/></label></>}<button className="primary-btn auth-submit" onClick={()=>auth(mode)}>{mode==='login'?'Sign in':'Create account'} <ChevronRight size={17}/></button><div className="auth-switch">{mode==='login'?"New to Udyog Saarthi?":"Already have an account?"} <button onClick={()=>setMode(mode==='login'?'register':'login')}>{mode==='login'?'Create account':'Sign in'}</button></div><div className="demo-note"><ShieldCheck size={15}/> Demo mode is available without third-party API keys.</div></div></div></div>}
-function CandidateOverview({user,jobs,apps,loading,setPage,apply}){const live=jobs.filter(j=>!j.isDemo).length;const overdue=apps.filter(a=>a.status==='overdue').length;return <><div className="hero-card"><div className="hero-content"><div className="hero-tag"><Sparkles size={13}/> YOUR CAREER, IN FOCUS</div><h2>Small steps.<br/><i>Stronger opportunities.</i></h2><p>Your profile helps us surface roles that connect with your skills and interests. Keep it updated to improve your recommendations.</p><button className="hero-btn" onClick={()=>setPage('Find opportunities')}>Explore opportunities <ChevronRight size={16}/></button></div><div className="hero-art"><div className="art-orbit orbit-one"></div><div className="art-orbit orbit-two"></div><div className="art-center"><Target size={42}/></div><div className="float-card float-top"><span className="float-dot green"></span> Skills-first matching</div><div className="float-card float-bottom"><Sparkles size={14}/> Your next step, clearer</div></div></div><div className="stats-grid"><Stat icon={BriefcaseBusiness} label="Opportunities" value={jobs.length} detail={`${live} live external · ${jobs.length-live} demo`} tone="blue"/><Stat icon={FileText} label="Applications" value={apps.length} detail="Across your journey" tone="purple"/><Stat icon={Clock3} label="Awaiting review" value={apps.filter(a=>['submitted','reviewing','overdue'].includes(a.status)).length} detail={overdue?`${overdue} overdue — follow up`: 'Review status at a glance'} tone="amber"/><Stat icon={Target} label="Profile skills" value={(user.skills||[]).length} detail="Used for matching" tone="green"/></div><div className="section-row"><div><span className="eyebrow">CURATED FOR YOUR PROFILE</span><h2>Opportunities to explore</h2></div><button className="text-btn" onClick={()=>setPage('Find opportunities')}>View all <ChevronRight size={15}/></button></div><div className="jobs-grid compact">{jobs.slice(0,2).map(j=><JobCard key={j.id} job={j} apply={apply} candidate/>)}</div></>}
-function EmployerOverview({analytics,setPage,load}){return <><div className="hero-card employer-hero"><div className="hero-content"><div className="hero-tag"><Building2 size={13}/> EMPLOYER WORKSPACE</div><h2>Hiring with clarity.<br/><i>Reviews with purpose.</i></h2><p>Manage candidate applications, keep review commitments visible and build a more transparent hiring process.</p><button className="hero-btn" onClick={()=>setPage('Applications')}>Review applications <ChevronRight size={16}/></button></div><div className="hero-art"><div className="art-orbit orbit-one"></div><div className="art-orbit orbit-two"></div><div className="art-center"><ChartNoAxesCombined size={42}/></div><div className="float-card float-top"><span className="float-dot green"></span> Review commitments</div><div className="float-card float-bottom"><Clock3 size={14}/> Application SLA</div></div></div><div className="stats-grid"><Stat icon={FileText} label="Total applications" value={analytics.total||0} detail="All received" tone="blue"/><Stat icon={Clock3} label="Awaiting review" value={analytics.pending||0} detail="Needs attention" tone="amber"/><Stat icon={AlertTriangle} label="Overdue" value={analytics.overdue||0} detail="Escalated for follow-up" tone="red"/><Stat icon={CheckCircle2} label="Hired" value={analytics.hired||0} detail="Successful outcomes" tone="green"/></div><section className="panel"><div className="panel-title"><div><span className="eyebrow">REVIEW OPERATIONS</span><h2>Application accountability</h2></div><button className="secondary-btn" onClick={()=>setPage('Applications')}>Open pipeline <ChevronRight size={15}/></button></div><p className="muted">Each candidate application receives a review due date. Unanswered applications are marked overdue and flagged for administrator follow-up; candidates are never automatically rejected for employer delay.</p></section></>}
-function Stat({icon:Icon,label,value,detail,tone}){return <div className="stat-card"><div className={`stat-icon ${tone}`}><Icon size={18}/></div><div className="stat-label">{label}</div><div className="stat-value">{value}</div><div className="stat-detail">{detail}</div></div>}
-function JobCard({job,apply,candidate,onGuide}){const[expanded,setExpanded]=useState(false);return <article className="job-card"><div className="job-top"><div className="company-logo">{(job.company||'U').slice(0,1).toUpperCase()}</div><div className="job-company"><b>{job.company}</b><small>{job.source}{job.isDemo?' · Illustrative listing':''}</small></div><button className="save-btn" title="Save job" onClick={()=>setExpanded(!expanded)}><Bookmark size={17}/></button></div><h3>{job.title}</h3><div className="job-meta"><span><MapPin size={13}/>{job.location}</span><span><BriefcaseBusiness size={13}/>{job.type||'Not specified'}</span></div>{job.match&&<div className="match-row"><div className="match-score"><Sparkles size={14}/>{job.match.score}% match</div><span>{job.match.reason}</span></div>}<p className="job-desc">{job.description?.slice(0,190)}{job.description?.length>190?'…':''}</p><div className="job-tags">{(job.skills||[]).slice(0,4).map(s=><span key={s}>{s}</span>)}{job.remote&&<span>Remote</span>}</div>{expanded&&<div className="job-extra">{job.match?.missingSkills?.length>0&&<p><b>Skills to explore:</b> {job.match.missingSkills.join(', ')}</p>}<p><b>Source:</b> {job.source}. Verify details and availability on the original listing.</p></div>}<div className="job-actions">{candidate&&<button className="primary-btn small-btn" onClick={()=>apply(job)}>Apply / Track <ChevronRight size={15}/></button>}{candidate&&<button className="secondary-btn small-btn" onClick={()=>onGuide?.(job)}><Sparkles size={14}/> Skill guidance</button>}{job.url&&job.url!=='#'&&<a className="external-link" href={job.url} target="_blank" rel="noreferrer">Original listing <ExternalLink size={13}/></a>}</div></article>}
-function ApplicationList({apps}){if(!apps.length)return <Empty title="Your journey starts here" text="When you apply to an opportunity, its status and review deadline will appear here."/>;return <div className="panel table-panel"><div className="table-wrap"><table><thead><tr><th>ROLE</th><th>SUBMITTED</th><th>REVIEW DUE</th><th>STATUS</th></tr></thead><tbody>{apps.map(a=><tr key={a._id||a.id}><td><b>{a.jobTitle}</b><small>{a.company}</small></td><td>{new Date(a.submittedAt).toLocaleDateString()}</td><td>{a.reviewDueAt?new Date(a.reviewDueAt).toLocaleDateString():'—'}</td><td><Status status={a.status}/></td></tr>)}</tbody></table></div><p className="table-foot">Employer review deadlines are accountability reminders, not automatic rejection dates.</p></div>}
-function EmployerApplications({load,updateStatus}){const[items,setItems]=useState([]);useEffect(()=>{api('/applications/manage').then(d=>setItems(d.applications||[])).catch(()=>{});},[]);return <div className="panel table-panel"><div className="panel-title"><div><span className="eyebrow">CANDIDATE PIPELINE</span><h2>Applications requiring attention</h2></div><button className="secondary-btn" onClick={()=>api('/applications/manage').then(d=>setItems(d.applications||[]))}>Refresh</button></div>{!items.length?<Empty title="No applications yet" text="Applications submitted to your organisation will appear here."/>:<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>ROLE</th><th>REVIEW DUE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{items.map(a=><tr key={a._id||a.id}><td><b>{a.candidate?.name||a.candidateName||'Candidate'}</b><small>{(a.candidate?.skills||[]).slice(0,3).join(', ')}</small></td><td>{a.jobTitle}<small>{a.company}</small></td><td>{a.reviewDueAt?new Date(a.reviewDueAt).toLocaleDateString():'—'}</td><td><Status status={a.status}/></td><td><select className="status-select" value="" onChange={e=>updateStatus(a._id||a.id,e.target.value)}><option value="" disabled>Update status</option>{['reviewing','shortlisted','interview','offered','hired','rejected'].map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>)}</tbody></table></div>}</div>}
-function Status({status}){return <span className={`status-pill ${status}`}>{status?.replace('_',' ')}</span>}
-function Empty({title,text}){return <div className="empty"><div className="empty-icon"><BriefcaseBusiness/></div><b>{title}</b><p>{text}</p></div>}
+// ✅ EDIT A: Accessibility imports (added at top)
+import AccessibilityWidget from './AccessibilityWidget';
+import './accessibility.css';
 
-createRoot(document.getElementById('root')).render(<App/>);
+import React, { useEffect, useMemo, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import {
+  Activity, ArrowDownRight, ArrowUpRight, BriefcaseBusiness, Building2,
+  CalendarClock, Check, ChevronDown, ChevronRight, CircleHelp, Clock3,
+  FileText, Filter, GraduationCap, LayoutDashboard, LogOut, MapPin, Menu,
+  MessageSquareText, Plus, Search, Settings, ShieldCheck, Sparkles, Target,
+  Users, WalletCards, X, Upload, Bookmark, ExternalLink, CheckCircle2,
+  AlertTriangle, BrainCircuit, ChartNoAxesCombined
+} from 'lucide-react';
+import { api } from './lib/api';
+import './styles.css';
+
+const initials = (n) =>
+  (n || 'U').split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase();
+
+function App() {
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('us_user') || 'null'));
+  const [page, setPage] = useState('Overview');
+  const [menu, setMenu] = useState(false);
+  const [toast, setToast] = useState('');
+  const [search, setSearch] = useState('');
+  const [jobs, setJobs] = useState([]);
+  const [apps, setApps] = useState([]);
+  const [analytics, setAnalytics] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState('');
+  const [form, setForm] = useState({
+    name: '', email: '', password: '', role: 'candidate',
+    skills: 'Excel, Communication', location: 'Bengaluru', education: 'Graduate'
+  });
+  const [profile, setProfile] = useState({ skills: '', interests: '', location: '', education: '' });
+  const [guidance, setGuidance] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
+
+  const notify = (m) => {
+    setToast(m);
+    setTimeout(() => setToast(''), 3200);
+  };
+
+  async function load() {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [j, a] = await Promise.all([
+        api(user.role === 'candidate' ? '/jobs/recommended' : '/jobs'),
+        api(user.role === 'candidate' ? '/applications/mine' : '/applications/analytics')
+      ]);
+      setJobs(j.jobs || []);
+      if (user.role === 'candidate') setApps(a.applications || []);
+      else setAnalytics(a);
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [user]);
+
+  async function auth(mode) {
+    try {
+      const d = await api(`/auth/${mode}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          skills: form.skills.split(',').map((x) => x.trim()).filter(Boolean)
+        })
+      });
+      localStorage.setItem('us_token', d.token);
+      localStorage.setItem('us_user', JSON.stringify(d.user));
+      setUser(d.user);
+      setModal('');
+      notify('Welcome to Udyog Saarthi');
+    } catch (e) {
+      notify(e.message);
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('us_token');
+    localStorage.removeItem('us_user');
+    setUser(null);
+    setPage('Overview');
+  }
+
+  async function apply(job) {
+    try {
+      await api('/applications', { method: 'POST', body: JSON.stringify({ job }) });
+      notify('Application submitted. Your review deadline is now active.');
+      load();
+    } catch (e) {
+      notify(e.message);
+    }
+  }
+
+  async function updateProfile() {
+    try {
+      const d = await api('/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...profile,
+          skills: profile.skills.split(',').map((x) => x.trim()).filter(Boolean),
+          interests: profile.interests.split(',').map((x) => x.trim()).filter(Boolean)
+        })
+      });
+      setUser(d.user);
+      localStorage.setItem('us_user', JSON.stringify(d.user));
+      notify('Profile updated');
+      setPage('Overview');
+    } catch (e) {
+      notify(e.message);
+    }
+  }
+
+  async function updateStatus(id, status) {
+    try {
+      await api(`/applications/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      notify(`Application moved to ${status}`);
+      load();
+    } catch (e) {
+      notify(e.message);
+    }
+  }
+
+  async function careerHelp(job) {
+    setAiBusy(true);
+    setGuidance('');
+    try {
+      const d = await api('/ai/career-guidance', {
+        method: 'POST',
+        body: JSON.stringify({ jobTitle: job.title, description: job.description })
+      });
+      setGuidance(d.guidance + `\n\nPowered by: ${d.poweredBy}`);
+    } catch (e) {
+      notify(e.message);
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  const nav = user?.role === 'candidate'
+    ? [
+        ['Workspace', [
+          ['Overview', LayoutDashboard],
+          ['Find opportunities', BriefcaseBusiness],
+          ['My applications', FileText],
+          ['Career intelligence', BrainCircuit]
+        ]],
+        ['Account', [['My profile', Users]]]
+      ]
+    : [
+        ['Workspace', [
+          ['Overview', LayoutDashboard],
+          ['Applications', FileText],
+          ['Job listings', BriefcaseBusiness]
+        ]]
+      ];
+
+  // ✅ EDIT B: AccessibilityWidget added to the login screen
+  if (!user) return (
+    <>
+      <AuthScreen form={form} setForm={setForm} auth={auth} modal={modal} setModal={setModal} />
+      <AccessibilityWidget />
+    </>
+  );
+
+  return (
+    <div className="app-shell">
+      <aside className={`sidebar ${menu ? 'open' : ''}`}>
+        <div className="brand">
+          <div className="brand-mark"><Sparkles size={19} /></div>
+          <div><b>udyog<span>.</span></b><small>SAARTHI PLATFORM</small></div>
+          <button className="mobile-close" onClick={() => setMenu(false)}><X /></button>
+        </div>
+        <div className="workspace-label">WORKSPACE</div>
+        {nav.map((group) => (
+          <div className="nav-group" key={group[0]}>
+            <div className="nav-heading">{group[0]}</div>
+            {group[1].map(([label, Icon]) => (
+              <button
+                key={label}
+                className={`nav-link ${page === label ? 'active' : ''}`}
+                onClick={() => { setPage(label); setMenu(false); }}
+              >
+                <Icon size={17} />
+                <span>{label}</span>
+                {label === 'My applications' && apps.length > 0 && <em>{apps.length}</em>}
+              </button>
+            ))}
+          </div>
+        ))}
+        <div className="sidebar-bottom">
+          <div className="help-card">
+            <div className="help-icon"><CircleHelp size={17} /></div>
+            <b>Need a hand?</b>
+            <p>Explore your career journey with confidence.</p>
+            <button onClick={() => setPage('Career intelligence')}>
+              Explore guidance <ChevronRight size={14} />
+            </button>
+          </div>
+          <button className="nav-link" onClick={() => setPage('My profile')}>
+            <Settings size={17} /> Settings
+          </button>
+          <div className="user-mini">
+            <div className="avatar">{initials(user.name)}</div>
+            <div className="user-mini-text">
+              <b>{user.name}</b>
+              <small>{user.role === 'candidate' ? 'Candidate account' : user.role}</small>
+            </div>
+            <button onClick={logout} title="Sign out"><LogOut size={16} /></button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main">
+        <header className="topbar">
+          <button className="hamburger" onClick={() => setMenu(true)}><Menu /></button>
+          <div className="crumb">Platform <ChevronRight size={13} /> <b>{page}</b></div>
+          <div className="top-actions">
+            <span className="status-dot"></span>
+            <span className="live-label">Workspace active</span>
+            <button className="icon-btn" onClick={() => notify('You are all caught up')}>
+              <Activity size={18} />
+            </button>
+            <div className="avatar small">{initials(user.name)}</div>
+          </div>
+        </header>
+
+        <div className="content">
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow">
+                {new Date().toLocaleDateString('en-IN', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                })}
+              </div>
+              <h1>
+                {page === 'Overview'
+                  ? `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, ${user.name.split(' ')[0]}`
+                  : page}
+              </h1>
+              <p>
+                {page === 'Overview' ? 'Here is what is happening across your employment journey.'
+                  : page === 'Find opportunities' ? 'Discover opportunities aligned with your skills and goals.'
+                  : page === 'Applications' ? 'Keep track of every candidate application and review deadline.'
+                  : page === 'My applications' ? 'Track progress, review dates and next steps.'
+                  : page === 'Career intelligence' ? 'Turn your experience into a practical next-step career plan.'
+                  : 'Keep your professional information up to date.'}
+              </p>
+            </div>
+            {user.role === 'employer' && (
+              <button className="primary-btn" onClick={() => notify('Job posting form is planned for the next iteration.')}>
+                <Plus size={16} /> Post a role
+              </button>
+            )}
+          </div>
+
+          {page === 'Overview' && (
+            <>
+              {user.role === 'candidate'
+                ? <CandidateOverview user={user} jobs={jobs} apps={apps} loading={loading} setPage={setPage} apply={apply} />
+                : <EmployerOverview analytics={analytics} apps={apps} setPage={setPage} load={load} />}
+            </>
+          )}
+
+          {(page === 'Find opportunities' || page === 'Job listings') && (
+            <>
+              <div className="toolbar">
+                <div className="searchbox">
+                  <Search size={17} />
+                  <input
+                    placeholder="Search job title, skill or company"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+                <button className="secondary-btn" onClick={load}>
+                  <Filter size={16} /> Refresh listings
+                </button>
+              </div>
+              <div className="source-line">
+                <span className="live-pulse"></span> Listings include live external feeds when available
+                <span className="dot-sep">·</span> Demo listings are clearly labelled
+              </div>
+              <div className="jobs-grid">
+                {jobs
+                  .filter((j) => `${j.title} ${j.company} ${j.description}`.toLowerCase().includes(search.toLowerCase()))
+                  .map((job) => (
+                    <JobCard key={job.id} job={job} apply={apply} candidate={user.role === 'candidate'} onGuide={careerHelp} />
+                  ))}
+              </div>
+              {!jobs.length && <Empty title="No listings loaded yet" text="Refresh the listings or check the backend connection." />}
+            </>
+          )}
+
+          {page === 'My applications' && <ApplicationList apps={apps} />}
+          {page === 'Applications' && <EmployerApplications load={load} updateStatus={updateStatus} />}
+
+          {page === 'Career intelligence' && (
+            <div className="two-col">
+              <section className="panel">
+                <div className="panel-title">
+                  <div>
+                    <span className="eyebrow">AI CAREER COACH</span>
+                    <h2>Build your next move</h2>
+                  </div>
+                  <div className="round-icon violet"><BrainCircuit /></div>
+                </div>
+                <p className="muted">
+                  Choose a role from your opportunities to get a skill-gap summary and a practical learning plan.
+                  Add skills to your profile for more relevant guidance.
+                </p>
+                <div className="guidance-result">
+                  {guidance || 'Your personalized career guidance will appear here.'}
+                </div>
+                <button
+                  className="primary-btn"
+                  disabled={aiBusy || !jobs.length}
+                  onClick={() => careerHelp(jobs[0])}
+                >
+                  {aiBusy ? 'Generating…' : <><Sparkles size={16} /> Generate guidance for {jobs[0]?.title || 'a role'}</>}
+                </button>
+              </section>
+              <section className="panel">
+                <div className="panel-title">
+                  <div>
+                    <span className="eyebrow">PROFILE SIGNALS</span>
+                    <h2>Your skills</h2>
+                  </div>
+                  <Target className="muted-icon" />
+                </div>
+                <div className="skill-cloud">
+                  {(user.skills || []).map((s) => <span className="skill-chip" key={s}>{s}</span>)}
+                </div>
+                <p className="muted small-copy">
+                  Your skills are used to explain job matches. They are not used to make automated hiring decisions.
+                </p>
+                <button className="secondary-btn" onClick={() => setPage('My profile')}>
+                  Update profile <ChevronRight size={15} />
+                </button>
+              </section>
+            </div>
+          )}
+
+          {page === 'My profile' && (
+            <section className="panel profile-panel">
+              <div className="panel-title">
+                <div>
+                  <span className="eyebrow">CANDIDATE PROFILE</span>
+                  <h2>Professional snapshot</h2>
+                </div>
+                <div className="round-icon blue"><Users /></div>
+              </div>
+              <div className="profile-fields">
+                <label>Full name
+                  <input value={profile.name ?? user.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} />
+                </label>
+                <label>Education
+                  <input value={profile.education ?? user.education} onChange={(e) => setProfile({ ...profile, education: e.target.value })} placeholder="e.g. BBA, B.Tech" />
+                </label>
+                <label>Preferred location
+                  <input value={profile.location ?? user.location} onChange={(e) => setProfile({ ...profile, location: e.target.value })} placeholder="e.g. Bengaluru" />
+                </label>
+                <label>Skills <small>Comma separated</small>
+                  <textarea value={profile.skills ?? (user.skills || []).join(', ')} onChange={(e) => setProfile({ ...profile, skills: e.target.value })} placeholder="Excel, communication, JavaScript" />
+                </label>
+                <label>Career interests <small>Comma separated</small>
+                  <textarea value={profile.interests ?? (user.interests || []).join(', ')} onChange={(e) => setProfile({ ...profile, interests: e.target.value })} placeholder="Customer support, administration, technology" />
+                </label>
+              </div>
+              <button className="primary-btn" onClick={updateProfile}>Save profile <Check size={16} /></button>
+            </section>
+          )}
+        </div>
+      </main>
+
+      {toast && <div className="toast"><CheckCircle2 size={17} />{toast}</div>}
+
+      {/* ✅ EDIT C: AccessibilityWidget added to the dashboard */}
+      <AccessibilityWidget />
+    </div>
+  );
+}
+
+function AuthScreen({ form, setForm, auth }) {
+  const [mode, setMode] = useState('login');
+  return (
+    <div className="auth-page">
+      <div className="auth-left">
+        <div className="brand light">
+          <div className="brand-mark"><Sparkles size={19} /></div>
+          <div><b>udyog<span>.</span></b><small>SAARTHI PLATFORM</small></div>
+        </div>
+        <div className="auth-pitch">
+          <div className="eyebrow light-eyebrow">CAREER INTELLIGENCE, WITH PURPOSE</div>
+          <h1>Make your next<br /><i>move meaningful.</i></h1>
+          <p>A more thoughtful way to discover opportunities, understand your strengths and move forward with confidence.</p>
+          <div className="auth-stats">
+            <div><b>01</b><span>Discover opportunities</span></div>
+            <div><b>02</b><span>Understand your fit</span></div>
+            <div><b>03</b><span>Track your progress</span></div>
+          </div>
+        </div>
+        <div className="auth-footer">An inclusive employment intelligence platform.</div>
+      </div>
+      <div className="auth-right">
+        <div className="auth-form-wrap">
+          <div className="eyebrow">YOUR CAREER WORKSPACE</div>
+          <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
+          <p className="muted">{mode === 'login' ? 'Sign in to continue your journey.' : 'Start building your next opportunity.'}</p>
+          {mode === 'register' && (
+            <label>Full name
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" />
+            </label>
+          )}
+          <label>Email address
+            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" />
+          </label>
+          <label>Password
+            <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="At least 8 characters" />
+          </label>
+          {mode === 'register' && (
+            <>
+              <label>Account type
+                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                  <option value="candidate">Candidate</option>
+                  <option value="employer">Employer</option>
+                </select>
+              </label>
+              <label>Skills <small>Comma separated</small>
+                <input value={form.skills} onChange={(e) => setForm({ ...form, skills: e.target.value })} />
+              </label>
+              <label>Preferred location
+                <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+              </label>
+            </>
+          )}
+          <button className="primary-btn auth-submit" onClick={() => auth(mode)}>
+            {mode === 'login' ? 'Sign in' : 'Create account'} <ChevronRight size={17} />
+          </button>
+          <div className="auth-switch">
+            {mode === 'login' ? 'New to Udyog Saarthi?' : 'Already have an account?'}{' '}
+            <button onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+              {mode === 'login' ? 'Create account' : 'Sign in'}
+            </button>
+          </div>
+          <div className="demo-note"><ShieldCheck size={15} /> Demo mode is available without third-party API keys.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CandidateOverview({ user, jobs, apps, loading, setPage, apply }) {
+  const live = jobs.filter((j) => !j.isDemo).length;
+  const overdue = apps.filter((a) => a.status === 'overdue').length;
+  return (
+    <>
+      <div className="hero-card">
+        <div className="hero-content">
+          <div className="hero-tag"><Sparkles size={13} /> YOUR CAREER, IN FOCUS</div>
+          <h2>Small steps.<br /><i>Stronger opportunities.</i></h2>
+          <p>Your profile helps us surface roles that connect with your skills and interests. Keep it updated to improve your recommendations.</p>
+          <button className="hero-btn" onClick={() => setPage('Find opportunities')}>
+            Explore opportunities <ChevronRight size={16} />
+          </button>
+        </div>
+        <div className="hero-art">
+          <div className="art-orbit orbit-one"></div>
+          <div className="art-orbit orbit-two"></div>
+          <div className="art-center"><Target size={42} /></div>
+          <div className="float-card float-top"><span className="float-dot green"></span> Skills-first matching</div>
+          <div className="float-card float-bottom"><Sparkles size={14} /> Your next step, clearer</div>
+        </div>
+      </div>
+      <div className="stats-grid">
+        <Stat icon={BriefcaseBusiness} label="Opportunities" value={jobs.length} detail={`${live} live external · ${jobs.length - live} demo`} tone="blue" />
+        <Stat icon={FileText} label="Applications" value={apps.length} detail="Across your journey" tone="purple" />
+        <Stat icon={Clock3} label="Awaiting review" value={apps.filter((a) => ['submitted', 'reviewing', 'overdue'].includes(a.status)).length} detail={overdue ? `${overdue} overdue — follow up` : 'Review status at a glance'} tone="amber" />
+        <Stat icon={Target} label="Profile skills" value={(user.skills || []).length} detail="Used for matching" tone="green" />
+      </div>
+      <div className="section-row">
+        <div>
+          <span className="eyebrow">CURATED FOR YOUR PROFILE</span>
+          <h2>Opportunities to explore</h2>
+        </div>
+        <button className="text-btn" onClick={() => setPage('Find opportunities')}>
+          View all <ChevronRight size={15} />
+        </button>
+      </div>
+      <div className="jobs-grid compact">
+        {jobs.slice(0, 2).map((j) => <JobCard key={j.id} job={j} apply={apply} candidate />)}
+      </div>
+    </>
+  );
+}
+
+function EmployerOverview({ analytics, setPage, load }) {
+  return (
+    <>
+      <div className="hero-card employer-hero">
+        <div className="hero-content">
+          <div className="hero-tag"><Building2 size={13} /> EMPLOYER WORKSPACE</div>
+          <h2>Hiring with clarity.<br /><i>Reviews with purpose.</i></h2>
+          <p>Manage candidate applications, keep review commitments visible and build a more transparent hiring process.</p>
+          <button className="hero-btn" onClick={() => setPage('Applications')}>
+            Review applications <ChevronRight size={16} />
+          </button>
+        </div>
+        <div className="hero-art">
+          <div className="art-orbit orbit-one"></div>
+          <div className="art-orbit orbit-two"></div>
+          <div className="art-center"><ChartNoAxesCombined size={42} /></div>
+          <div className="float-card float-top"><span className="float-dot green"></span> Review commitments</div>
+          <div className="float-card float-bottom"><Clock3 size={14} /> Application SLA</div>
+        </div>
+      </div>
+      <div className="stats-grid">
+        <Stat icon={FileText} label="Total applications" value={analytics.total || 0} detail="All received" tone="blue" />
+        <Stat icon={Clock3} label="Awaiting review" value={analytics.pending || 0} detail="Needs attention" tone="amber" />
+        <Stat icon={AlertTriangle} label="Overdue" value={analytics.overdue || 0} detail="Escalated for follow-up" tone="red" />
+        <Stat icon={CheckCircle2} label="Hired" value={analytics.hired || 0} detail="Successful outcomes" tone="green" />
+      </div>
+      <section className="panel">
+        <div className="panel-title">
+          <div>
+            <span className="eyebrow">REVIEW OPERATIONS</span>
+            <h2>Application accountability</h2>
+          </div>
+          <button className="secondary-btn" onClick={() => setPage('Applications')}>
+            Open pipeline <ChevronRight size={15} />
+          </button>
+        </div>
+        <p className="muted">
+          Each candidate application receives a review due date. Unanswered applications are marked overdue
+          and flagged for administrator follow-up; candidates are never automatically rejected for employer delay.
+        </p>
+      </section>
+    </>
+  );
+}
+
+function Stat({ icon: Icon, label, value, detail, tone }) {
+  return (
+    <div className="stat-card">
+      <div className={`stat-icon ${tone}`}><Icon size={18} /></div>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+      <div className="stat-detail">{detail}</div>
+    </div>
+  );
+}
+
+function JobCard({ job, apply, candidate, onGuide }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <article className="job-card">
+      <div className="job-top">
+        <div className="company-logo">{(job.company || 'U').slice(0, 1).toUpperCase()}</div>
+        <div className="job-company">
+          <b>{job.company}</b>
+          <small>{job.source}{job.isDemo ? ' · Illustrative listing' : ''}</small>
+        </div>
+        <button className="save-btn" title="Save job" onClick={() => setExpanded(!expanded)}>
+          <Bookmark size={17} />
+        </button>
+      </div>
+      <h3>{job.title}</h3>
+      <div className="job-meta">
+        <span><MapPin size={13} />{job.location}</span>
+        <span><BriefcaseBusiness size={13} />{job.type || 'Not specified'}</span>
+      </div>
+      {job.match && (
+        <div className="match-row">
+          <div className="match-score"><Sparkles size={14} />{job.match.score}% match</div>
+          <span>{job.match.reason}</span>
+        </div>
+      )}
+      <p className="job-desc">{job.description?.slice(0, 190)}{job.description?.length > 190 ? '…' : ''}</p>
+      <div className="job-tags">
+        {(job.skills || []).slice(0, 4).map((s) => <span key={s}>{s}</span>)}
+        {job.remote && <span>Remote</span>}
+      </div>
+      {expanded && (
+        <div className="job-extra">
+          {job.match?.missingSkills?.length > 0 && (
+            <p><b>Skills to explore:</b> {job.match.missingSkills.join(', ')}</p>
+          )}
+          <p><b>Source:</b> {job.source}. Verify details and availability on the original listing.</p>
+        </div>
+      )}
+      <div className="job-actions">
+        {candidate && (
+          <button className="primary-btn small-btn" onClick={() => apply(job)}>
+            Apply / Track <ChevronRight size={15} />
+          </button>
+        )}
+        {candidate && (
+          <button className="secondary-btn small-btn" onClick={() => onGuide?.(job)}>
+            <Sparkles size={14} /> Skill guidance
+          </button>
+        )}
+        {job.url && job.url !== '#' && (
+          <a className="external-link" href={job.url} target="_blank" rel="noreferrer">
+            Original listing <ExternalLink size={13} />
+          </a>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ApplicationList({ apps }) {
+  if (!apps.length) return (
+    <Empty
+      title="Your journey starts here"
+      text="When you apply to an opportunity, its status and review deadline will appear here."
+    />
+  );
+  return (
+    <div className="panel table-panel">
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ROLE</th><th>SUBMITTED</th><th>REVIEW DUE</th><th>STATUS</th></tr>
+          </thead>
+          <tbody>
+            {apps.map((a) => (
+              <tr key={a._id || a.id}>
+                <td><b>{a.jobTitle}</b><small>{a.company}</small></td>
+                <td>{new Date(a.submittedAt).toLocaleDateString()}</td>
+                <td>{a.reviewDueAt ? new Date(a.reviewDueAt).toLocaleDateString() : '—'}</td>
+                <td><Status status={a.status} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="table-foot">Employer review deadlines are accountability reminders, not automatic rejection dates.</p>
+    </div>
+  );
+}
+
+function EmployerApplications({ load, updateStatus }) {
+  const [items, setItems] = useState([]);
+  useEffect(() => {
+    api('/applications/manage').then((d) => setItems(d.applications || [])).catch(() => {});
+  }, []);
+  return (
+    <div className="panel table-panel">
+      <div className="panel-title">
+        <div>
+          <span className="eyebrow">CANDIDATE PIPELINE</span>
+          <h2>Applications requiring attention</h2>
+        </div>
+        <button className="secondary-btn" onClick={() => api('/applications/manage').then((d) => setItems(d.applications || []))}>
+          Refresh
+        </button>
+      </div>
+      {!items.length ? (
+        <Empty title="No applications yet" text="Applications submitted to your organisation will appear here." />
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>CANDIDATE</th><th>ROLE</th><th>REVIEW DUE</th><th>STATUS</th><th>ACTION</th></tr>
+            </thead>
+            <tbody>
+              {items.map((a) => (
+                <tr key={a._id || a.id}>
+                  <td>
+                    <b>{a.candidate?.name || a.candidateName || 'Candidate'}</b>
+                    <small>{(a.candidate?.skills || []).slice(0, 3).join(', ')}</small>
+                  </td>
+                  <td>{a.jobTitle}<small>{a.company}</small></td>
+                  <td>{a.reviewDueAt ? new Date(a.reviewDueAt).toLocaleDateString() : '—'}</td>
+                  <td><Status status={a.status} /></td>
+                  <td>
+                    <select className="status-select" value="" onChange={(e) => updateStatus(a._id || a.id, e.target.value)}>
+                      <option value="" disabled>Update status</option>
+                      {['reviewing', 'shortlisted', 'interview', 'offered', 'hired', 'rejected'].map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Status({ status }) {
+  return <span className={`status-pill ${status}`}>{status?.replace('_', ' ')}</span>;
+}
+
+function Empty({ title, text }) {
+  return (
+    <div className="empty">
+      <div className="empty-icon"><BriefcaseBusiness /></div>
+      <b>{title}</b>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+createRoot(document.getElementById('root')).render(<App />);
