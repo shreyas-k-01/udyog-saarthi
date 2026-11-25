@@ -1,5 +1,5 @@
 // ✅ EDIT A: Accessibility imports (added at top)
-import AccessibilityWidget from './AccessibilityWidget';
+import AccessibilityWidget from './Accessibilitywidget';
 import './accessibility.css';
 
 import React, { useEffect, useMemo, useState } from 'react';
