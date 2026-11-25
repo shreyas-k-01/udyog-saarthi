@@ -13,6 +13,7 @@ import {
   AlertTriangle, BrainCircuit, ChartNoAxesCombined
 } from 'lucide-react';
 import { api } from './lib/api';
+import ResumeAnalyzer from './components/ResumeAnalyzer';
 import './styles.css';
 
 const initials = (n) =>
@@ -152,7 +153,8 @@ function App() {
           ['Overview', LayoutDashboard],
           ['Find opportunities', BriefcaseBusiness],
           ['My applications', FileText],
-          ['Career intelligence', BrainCircuit]
+          ['Career intelligence', BrainCircuit],
+          ['Resume Analyzer', FileText]
         ]],
         ['Account', [['My profile', Users]]]
       ]
@@ -253,6 +255,7 @@ function App() {
                   : page === 'Applications' ? 'Keep track of every candidate application and review deadline.'
                   : page === 'My applications' ? 'Track progress, review dates and next steps.'
                   : page === 'Career intelligence' ? 'Turn your experience into a practical next-step career plan.'
+                  : page === 'Resume Analyzer' ? 'Review your resume, identify skills and get actionable improvement feedback.'
                   : 'Keep your professional information up to date.'}
               </p>
             </div>
@@ -302,6 +305,7 @@ function App() {
           )}
 
           {page === 'My applications' && <ApplicationList apps={apps} />}
+          {page === 'Resume Analyzer' && user.role === 'candidate' && <ResumeAnalyzer notify={notify} />}
           {page === 'Applications' && <EmployerApplications load={load} updateStatus={updateStatus} />}
 
           {page === 'Career intelligence' && (
