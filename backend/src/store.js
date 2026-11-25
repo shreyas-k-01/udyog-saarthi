@@ -1,1 +1,1 @@
-export const memory = { users: [], applications: [] };
+export const memory = { users: [], applications: [], resumes: [] };
